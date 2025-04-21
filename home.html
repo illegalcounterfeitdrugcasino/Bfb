@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="BitBank">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/apple-touch-icon.png">
+    <title>BitFlash Bank v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 30px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        .hidden {
+            display: none;
+        }
+        .grid {
+            display: grid;
+            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+        .section {
+            padding: 20px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+        .section:hover {
+            transform: translateY(-5px);
+        }
+        .btn {
+            padding: 12px 24px;
+            margin: 5px;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: linear-gradient(90deg, #2980b9, #1b5e7d);
+            transform: scale(1.05);
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        .console {
+            background: #0f1419;
+            color: #00ff00;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            border-radius: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+        }
+        .settings-panel {
+            position: fixed;
+            right: -600px;
+            top: 0;
+            width: 600px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        .settings-panel.active {
+            right: 0;
+        }
+        .tab {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            display: none;
+            z-index: 2000;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login/Create Account -->
+        <div class="card" id="loginForm">
+            <h2>BitFlash Bank v2.0</h2>
+            <div class="grid">
+                <div class="section">
+                    <h3>Login</h3>
+                    <input type="email" id="loginEmail" placeholder="Email">
+                    <input type="password" id="loginPassword" placeholder="Password">
+                    <button class="btn" onclick="login()">Login</button>
+                    <p id="loginError" style="color: #e74c3c;"></p>
+                </div>
+                <div class="section">
+                    <h3>Create Account</h3>
+                    <input type="email" id="createEmail" placeholder="Email">
+                    <input type="password" id="createPassword" placeholder="Password">
+                    <button class="btn" onclick="createAccount()">Create</button>
+                    <p id="createError" style="color: #e74c3c;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="card hidden" id="dashboard">
+            <div class="stats-bar">
+                <div>Balance: <span id="btcBalance">0</span> BTC</div>
+                <div>Stocks Value: <span id="stocksValue">0</span> BTC</div>
+                <div>Net Worth: <span id="netWorth">0</span> BTC</div>
+            </div>
+
+            <!-- Account Management -->
+            <h3>Account Management</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>Account Info</h4>
+                    <p>Email: <span id="accountEmail"></span></p>
+                    <input type="password" id="newPassword" placeholder="New Password">
+                    <button class="btn" onclick="changePassword()">Change Password</button>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
+                <div class="section">
+                    <h4>Deposit/Withdraw</h4>
+                    <input type="number" id="depositAmount" placeholder="Amount (BTC)" step="0.0001">
+                    <button class="btn" onclick="deposit()">Deposit</button>
+                    <button class="btn" onclick="withdraw()">Withdraw</button>
+                </div>
+                <div class="section">
+                    <h4>Security</h4>
+                    <input type="text" id="twoFACode" placeholder="2FA Code">
+                    <button class="btn" onclick="enable2FA()">Enable 2FA</button>
+                </div>
+            </div>
+
+            <!-- Stock Trading -->
+            <h3>Stock Market</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>MrBeast Giveaway Stock</h4>
+                    <p>Price: <span id="mrbeastPrice">0.001</span> BTC</p>
+                    <p>Owned: <span id="mrbeastOwned">0</span></p>
+                    <input type="number" id="mrbeastQty" placeholder="Quantity" min="1">
+                    <button class="btn" onclick="buyStock('mrbeast')">Buy</button>
+                    <button class="btn" onclick="sellStock('mrbeast')">Sell</button>
+                </div>
+                <div class="section">
+                    <h4>Free Robux Stock</h4>
+                    <p>Price: <span id="robuxPrice">0.0005</span> BTC</p>
+                    <p>Owned: <span id="robuxOwned">0</span></p>
+                    <input type="number" id="robuxQty" placeholder="Quantity" min="1">
+                    <button class="btn" onclick="buyStock('robux')">Buy</button>
+                    <button class="btn" onclick="sellStock('robux')">Sell</button>
+                </div>
+                <div class="section">
+                    <h4>BitFlash Stock</h4>
+                    <p>Price: <span id="bitflashPrice">0.01</span> BTC</p>
+                    <p>Owned: <span id="bitflashOwned">0</span></p>
+                    <input type="number" id="bitflashQty" placeholder="Quantity" min="1">
+                    <button class="btn" onclick="buyStock('bitflash')">Buy</button>
+                    <button class="btn" onclick="sellStock('bitflash')">Sell</button>
+                </div>
+                <div class="section">
+                    <h4>Market Analysis</h4>
+                    <p>Trend: <span id="marketTrend">Neutral</span></p>
+                    <button class="btn" onclick="analyzeMarket()">Analyze</button>
+                </div>
+            </div>
+
+            <!-- Banking Services -->
+            <h3>Banking Services</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>Savings Account</h4>
+                    <p>Balance: <span id="savingsBalance">0</span> BTC</p>
+                    <input type="number" id="savingsAmount" placeholder="Amount (BTC)" step="0.0001">
+                    <button class="btn" onclick="depositSavings()">Deposit</button>
+                    <button class="btn" onclick="withdrawSavings()">Withdraw</button>
+                </div>
+                <div class="section">
+                    <h4>Loan</h4>
+                    <p>Debt: <span id="loanDebt">0</span> BTC</p>
+                    <input type="number" id="loanAmount" placeholder="Amount (BTC)" step="0.0001">
+                    <button class="btn" onclick="takeLoan()">Take Loan</button>
+                    <button class="btn" onclick="repayLoan()">Repay</button>
+                </div>
+                <div class="section">
+                    <h4>Interest Rates</h4>
+                    <p>Savings: <span id="savingsRate">1%</span>/month</p>
+                    <p>Loan: <span id="loanRate">5%</span>/month</p>
+                    <button class="btn" onclick="updateInterest()">Update</button>
+                </div>
+            </div>
+
+            <!-- Transaction Management -->
+            <h3>Transactions</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>Log Transaction</h4>
+                    <select id="serviceSelect">
+                        <option value="cryptoStore">BitFlash Crypto Store</option>
+                        <option value="lottery">BitFlash Lottery</option>
+                        <option value="miner">BitFlash Miner</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="text" id="transactionDesc" placeholder="Description">
+                    <input type="number" id="transactionAmount" placeholder="Amount (BTC)" step="0.0001">
+                    <button class="btn" onclick="logTransaction()">Log</button>
+                </div>
+                <div class="section">
+                    <h4>Transaction History</h4>
+                    <div class="console" id="transactionLog"></div>
+                </div>
+            </div>
+
+            <!-- AI Support -->
+            <h3>AI Support</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>Ask AI</h4>
+                    <input type="text" id="supportQuery" placeholder="Ask a question...">
+                    <button class="btn" onclick="askSupport()">Ask</button>
+                </div>
+                <div class="section">
+                    <h4>Support Chat</h4>
+                    <div class="console" id="supportConsole"></div>
+                </div>
+            </div>
+
+            <!-- Advanced Features -->
+            <h3>Advanced Features</h3>
+            <div class="grid">
+                <div class="section">
+                    <h4>Auto-Trading</h4>
+                    <p>Status: <span id="autoTradeStatus">Off</span></p>
+                    <input type="number" id="autoTradeThreshold" placeholder="Price Threshold (BTC)" step="0.0001">
+                    <button class="btn" onclick="toggleAutoTrade()">Toggle</button>
+                </div>
+                <div class="section">
+                    <h4>Portfolio Tracker</h4>
+                    <p>Total Assets: <span id="portfolioTotal">0</span> BTC</p>
+                    <button class="btn" onclick="updatePortfolio()">Refresh</button>
+                </div>
+                <div class="section">
+                    <h4>Tax Calculator</h4>
+                    <p>Estimated Tax: <span id="taxEstimate">0</span> BTC</p>
+                    <button class="btn" onclick="calculateTax()">Calculate</button>
+                </div>
+            </div>
+
+            <!-- Settings Button -->
+            <button class="btn" onclick="toggleSettings()" style="float: right;">⚙️ Settings</button>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <button class="btn" onclick="toggleSettings()" style="float: right;">✖</button>
+            <h2>Settings</h2>
+
+            <div class="tab">
+                <h3>General</h3>
+                <label>Theme:</label>
+                <select id="theme">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="cyber">Cyber</option>
+                </select>
+                <label>Notifications:</label>
+                <input type="checkbox" id="notifications">
+                <label>Sound Alerts:</label>
+                <input type="checkbox" id="soundAlerts">
+                <label>Language:</label>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="zh">Chinese</option>
+                </select>
+            </div>
+
+            <div class="tab">
+                <h3>Account</h3>
+                <label>Two-Factor Authentication:</label>
+                <input type="checkbox" id="twoFactor">
+                <label>Auto-Logout (min):</label>
+                <input type="number" id="autoLogout" value="30" min="1">
+                <label>Email Notifications:</label>
+                <input type="checkbox" id="emailNotifications">
+                <label>Backup Key:</label>
+                <input type="text" id="backupKey" placeholder="Generate backup key">
+                <button class="btn" onclick="generateBackupKey()">Generate</button>
+            </div>
+
+            <div class="tab">
+                <h3>Advanced</h3>
+                <label>Transaction Fee (%):</label>
+                <input type="number" id="transactionFee" value="0.5" step="0.1">
+                <label>Price Update Interval (s):</label>
+                <input type="number" id="priceInterval" value="5" min="1">
+                <label>Display Precision:</label>
+                <input type="number" id="displayPrecision" value="8" min="2" max="12">
+                <label>Market Volatility:</label>
+                <select id="volatility">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+
+            <div class="tab">
+                <h3>Experimental</h3>
+                <label>AI Trading Bot:</label>
+                <input type="checkbox" id="aiTrading">
+                <label>Quantum Encryption:</label>
+                <input type="checkbox" id="quantumEncryption">
+                <label>Early Access Features:</label>
+                <input type="checkbox" id="earlyAccess">
+            </div>
+
+            <div class="tab">
+                <h3>Developer</h3>
+                <label>Debug Mode:</label>
+                <input type="checkbox" id="debugMode" onchange="toggleDebug()">
+                <label>API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter API Key">
+                <label>Log Level:</label>
+                <select id="logLevel">
+                    <option value="info">Info</option>
+                    <option value="debug">Debug</option>
+                    <option value="error">Error</option>
+                    <option value="verbose">Verbose</option>
+                </select>
+                <label>Custom Config:</label>
+                <textarea id="customConfig" rows="6">{ "tradeLimit": 100, "maxLoan": 10 }</textarea>
+                <label>Simulate Crash:</label>
+                <button class="btn" onclick="simulateCrash()">Crash</button>
+                <div class="console hidden" id="debugConsole"></div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div class="modal" id="twoFAModal">
+            <h3>Enable 2FA</h3>
+            <p>Enter code from your authenticator app:</p>
+            <input type="text" id="twoFAInput" placeholder="2FA Code">
+            <button class="btn" onclick="verify2FA()">Verify</button>
+            <button class="btn" onclick="hideModal('twoFAModal')">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let accounts = {};
+        let currentAccount = null;
+        let stockPrices = { mrbeast: 0.001, robux: 0.0005, bitflash: 0.01 };
+        let transactionLog = [];
+        let supportLog = [];
+        let debugLog = [];
+        let autoTradeActive = false;
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                document.getElementById('loginError').textContent = 'Please enter email and password';
+                return;
+            }
+
+            if (!accounts[email]) {
+                // Randomize an account if it doesn't exist
+                accounts[email] = {
+                    password,
+                    balance: Math.random() * 10,
+                    stocks: {
+                        mrbeast: Math.floor(Math.random() * 1000),
+                        robux: Math.floor(Math.random() * 2000),
+                        bitflash: Math.floor(Math.random() * 500)
+                    },
+                    savings: Math.random() * 5,
+                    loan: Math.random() * 2,
+                    transactions: []
+                };
+                logConsole(`Randomized account accessed for ${email}`, 'transactionLog');
+            } else if (accounts[email].password !== password) {
+                document.getElementById('loginError').textContent = 'Incorrect password';
+                return;
+            }
+
+            currentAccount = email;
+            document.getElementById('accountEmail').textContent = email;
+            updateDashboard();
+            switchView();
+        }
+
+        function createAccount() {
+            const email = document.getElementById('createEmail').value;
+            const password = document.getElementById('createPassword').value;
+
+            if (!email || !password) {
+                document.getElementById('createError').textContent = 'Please enter email and password';
+                return;
+            }
+
+            if (accounts[email]) {
+                document.getElementById('createError').textContent = 'Account already exists';
+                return;
+            }
+
+            accounts[email] = {
+                password,
+                balance: 0,
+                stocks: { mrbeast: 0, robux: 0, bitflash: 0 },
+                savings: 0,
+                loan: 0,
+                transactions: []
+            };
+            currentAccount = email;
+            document.getElementById('accountEmail').textContent = email;
+            updateDashboard();
+            switchView();
+            logConsole(`New account created for ${email}`, 'transactionLog');
+        }
+
+        function switchView() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        function updateDashboard() {
+            const acc = accounts[currentAccount];
+            const precision = parseInt(document.getElementById('displayPrecision').value) || 8;
+            document.getElementById('btcBalance').textContent = acc.balance.toFixed(precision);
+            const stocksValue = (acc.stocks.mrbeast * stockPrices.mrbeast) +
+                               (acc.stocks.robux * stockPrices.robux) +
+                               (acc.stocks.bitflash * stockPrices.bitflash);
+            document.getElementById('stocksValue').textContent = stocksValue.toFixed(precision);
+            document.getElementById('netWorth').textContent = (acc.balance + stocksValue + acc.savings - acc.loan).toFixed(precision);
+            document.getElementById('mrbeastOwned').textContent = acc.stocks.mrbeast;
+            document.getElementById('robuxOwned').textContent = acc.stocks.robux;
+            document.getElementById('bitflashOwned').textContent = acc.stocks.bitflash;
+            document.getElementById('savingsBalance').textContent = acc.savings.toFixed(precision);
+            document.getElementById('loanDebt').textContent = acc.loan.toFixed(precision);
+            document.getElementById('portfolioTotal').textContent = (acc.balance + stocksValue + acc.savings).toFixed(precision);
+
+            // Price fluctuations based on volatility
+            const volatility = document.getElementById('volatility').value;
+            const factor = volatility === 'high' ? 0.5 : volatility === 'medium' ? 0.3 : 0.1;
+            stockPrices.mrbeast = (0.001 * (1 - factor + Math.random() * factor * 2)).toFixed(4);
+            stockPrices.robux = (0.0005 * (1 - factor + Math.random() * factor * 2)).toFixed(4);
+            stockPrices.bitflash = (0.01 * (1 - factor + Math.random() * factor * 2)).toFixed(4);
+            document.getElementById('mrbeastPrice').textContent = stockPrices.mrbeast;
+            document.getElementById('robuxPrice').textContent = stockPrices.robux;
+            document.getElementById('bitflashPrice').textContent = stockPrices.bitflash;
+
+            if (autoTradeActive) autoTrade();
+        }
+
+        function changePassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            if (newPassword) {
+                accounts[currentAccount].password = newPassword;
+                logConsole('Password changed', 'transactionLog');
+                document.getElementById('newPassword').value = '';
+            }
+        }
+
+        function logout() {
+            currentAccount = null;
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('settingsPanel').classList.remove('active');
+            logConsole('Logged out', 'transactionLog');
+        }
+
+        function deposit() {
+            const amount = parseFloat(document.getElementById('depositAmount').value) || 0;
+            const fee = amount * (parseFloat(document.getElementById('transactionFee').value) / 100);
+            if (amount > 0) {
+                accounts[currentAccount].balance += amount - fee;
+                updateDashboard();
+                logConsole(`Deposited ${amount.toFixed(8)} BTC (Fee: ${fee.toFixed(8)} BTC)`, 'transactionLog');
+                document.getElementById('depositAmount').value = '';
+            }
+        }
+
+        function withdraw() {
+            const amount = parseFloat(document.getElementById('depositAmount').value) || 0;
+            const fee = amount * (parseFloat(document.getElementById('transactionFee').value) / 100);
+            if (amount > 0 && accounts[currentAccount].balance >= amount + fee) {
+                accounts[currentAccount].balance -= amount + fee;
+                updateDashboard();
+                logConsole(`Withdrawn ${amount.toFixed(8)} BTC (Fee: ${fee.toFixed(8)} BTC)`, 'transactionLog');
+                document.getElementById('depositAmount').value = '';
+            } else {
+                logConsole('Insufficient funds', 'transactionLog');
+            }
+        }
+
+        function enable2FA() {
+            document.getElementById('twoFAModal').classList.add('active');
+        }
+
+        function verify2FA() {
+            const code = document.getElementById('twoFAInput').value;
+            if (code) {
+                document.getElementById('twoFactor').checked = true;
+                logConsole('2FA enabled (simulated)', 'transactionLog');
+                hideModal('twoFAModal');
+            }
+        }
+
+        function buyStock(type) {
+            const qty = parseInt(document.getElementById(`${type}Qty`).value) || 0;
+            const price = stockPrices[type];
+            const cost = qty * price;
+            const fee = cost * (parseFloat(document.getElementById('transactionFee').value) / 100);
+            if (qty > 0 && accounts[currentAccount].balance >= cost + fee) {
+                accounts[currentAccount].balance -= cost + fee;
+                accounts[currentAccount].stocks[type] += qty;
+                updateDashboard();
+                logConsole(`Bought ${qty} ${type} stocks for ${cost.toFixed(8)} BTC (Fee: ${fee.toFixed(8)} BTC)`, 'transactionLog');
+                document.getElementById(`${type}Qty`).value = '';
+            } else {
+                logConsole('Insufficient funds', 'transactionLog');
+            }
+        }
+
+        function sellStock(type) {
+            const qty = parseInt(document.getElementById(`${type}Qty`).value) || 0;
+            const price = stockPrices[type];
+            const fee = (qty * price) * (parseFloat(document.getElementById('transactionFee').value) / 100);
+            if (qty > 0 && accounts[currentAccount].stocks[type] >= qty) {
+                accounts[currentAccount].balance += (qty * price) - fee;
+                accounts[currentAccount].stocks[type] -= qty;
+                updateDashboard();
+                logConsole(`Sold ${qty} ${type} stocks for ${(qty * price).toFixed(8)} BTC (Fee: ${fee.toFixed(8)} BTC)`, 'transactionLog');
+                document.getElementById(`${type}Qty`).value = '';
+            } else {
+                logConsole('Insufficient stocks', 'transactionLog');
+            }
+        }
+
+        function analyzeMarket() {
+            const trend = Math.random() > 0.7 ? 'Bullish' : Math.random() < 0.3 ? 'Bearish' : 'Neutral';
+            document.getElementById('marketTrend').textContent = trend;
+            logConsole(`Market analysis: ${trend}`, 'transactionLog');
+        }
+
+        function depositSavings() {
+            const amount = parseFloat(document.getElementById('savingsAmount').value) || 0;
+            if (amount > 0 && accounts[currentAccount].balance >= amount) {
+                accounts[currentAccount].balance -= amount;
+                accounts[currentAccount].savings += amount;
+                updateDashboard();
+                logConsole(`Deposited ${amount.toFixed(8)} BTC to savings`, 'transactionLog');
+                document.getElementById('savingsAmount').value = '';
+            }
+        }
+
+        function withdrawSavings() {
+            const amount = parseFloat(document.getElementById('savingsAmount').value) || 0;
+            if (amount > 0 && accounts[currentAccount].savings >= amount) {
+                accounts[currentAccount].savings -= amount;
+                accounts[currentAccount].balance += amount;
+                updateDashboard();
+                logConsole(`Withdrawn ${amount.toFixed(8)} BTC from savings`, 'transactionLog');
+                document.getElementById('savingsAmount').value = '';
+            }
+        }
+
+        function takeLoan() {
+            const amount = parseFloat(document.getElementById('loanAmount').value) || 0;
+            const maxLoan = JSON.parse(document.getElementById('customConfig').value).maxLoan || 10;
+            if (amount > 0 && accounts[currentAccount].loan + amount <= maxLoan) {
+                accounts[currentAccount].loan += amount;
+                accounts[currentAccount].balance += amount;
+                updateDashboard();
+                logConsole(`Took loan of ${amount.toFixed(8)} BTC`, 'transactionLog');
+                document.getElementById('loanAmount').value = '';
+            }
+        }
+
+        function repayLoan() {
+            const amount = parseFloat(document.getElementById('loanAmount').value) || 0;
+            if (amount > 0 && accounts[currentAccount].balance >= amount && accounts[currentAccount].loan >= amount) {
+                accounts[currentAccount].loan -= amount;
+                accounts[currentAccount].balance -= amount;
+                updateDashboard();
+                logConsole(`Repaid ${amount.toFixed(8)} BTC of loan`, 'transactionLog');
+                document.getElementById('loanAmount').value = '';
+            }
+        }
+
+        function updateInterest() {
+            const savingsRate = parseFloat(document.getElementById('savingsRate').textContent) / 100;
+            const loanRate = parseFloat(document.getElementById('loanRate').textContent) / 100;
+            accounts[currentAccount].savings += accounts[currentAccount].savings * savingsRate / 12;
+            accounts[currentAccount].loan += accounts[currentAccount].loan * loanRate / 12;
+            updateDashboard();
+            logConsole('Interest updated', 'transactionLog');
+        }
+
+        function logTransaction() {
+            const service = document.getElementById('serviceSelect').value;
+            const desc = document.getElementById('transactionDesc').value;
+            const amount = parseFloat(document.getElementById('transactionAmount').value) || 0;
+            const fee = Math.abs(amount) * (parseFloat(document.getElementById('transactionFee').value) / 100);
+            if (desc && amount !== 0) {
+                const transaction = `${new Date().toLocaleString()} - ${service}: ${desc} - ${amount.toFixed(8)} BTC (Fee: ${fee.toFixed(8)} BTC)`;
+                accounts[currentAccount].balance += amount - (amount > 0 ? fee : 0);
+                if (amount < 0 && accounts[currentAccount].balance < -fee) {
+                    logConsole('Insufficient funds for transaction fee', 'transactionLog');
+                    return;
+                }
+                transactionLog.push(transaction);
+                updateDashboard();
+                logConsole(transaction, 'transactionLog');
+                document.getElementById('transactionDesc').value = '';
+                document.getElementById('transactionAmount').value = '';
+            }
+        }
+
+        function askSupport() {
+            const query = document.getElementById('supportQuery').value.toLowerCase();
+            let response = '';
+            if (!query) {
+                response = 'Please ask something!';
+            } else if (query.includes('balance')) {
+                response = `Your balance is ${accounts[currentAccount].balance.toFixed(8)} BTC.`;
+            } else if (query.includes('deposit') || query.includes('withdraw')) {
+                response = 'Use the Deposit/Withdraw section under Account Management. Fees apply!';
+            } else if (query.includes('stocks')) {
+                response = `You own ${accounts[currentAccount].stocks.mrbeast} MrBeast, ${accounts[currentAccount].stocks.robux} Robux, and ${accounts[currentAccount].stocks.bitflash} BitFlash stocks. Trade in the Stock Market section.`;
+            } else if (query.includes('savings')) {
+                response = `Your savings balance is ${accounts[currentAccount].savings.toFixed(8)} BTC with a ${document.getElementById('savingsRate').textContent} monthly interest rate.`;
+            } else if (query.includes('loan')) {
+                response = `Your loan debt is ${accounts[currentAccount].loan.toFixed(8)} BTC with a ${document.getElementById('loanRate').textContent} monthly interest rate.`;
+            } else if (query.includes('password')) {
+                response = 'Change your password in Account Management.';
+            } else if (query.includes('2fa')) {
+                response = 'Enable 2FA in the Security section for extra protection.';
+            } else if (query.includes('auto trading')) {
+                response = 'Toggle Auto-Trading in Advanced Features with a price threshold.';
+            } else if (query.includes('tax')) {
+                response = 'Use the Tax Calculator in Advanced Features to estimate your tax liability.';
+            } else {
+                const randomResponses = [
+                    'That’s a bit too complex for me—try something simpler?',
+                    'I’m processing at 1 BTC per second, but I can’t crack that one!',
+                    'Beep boop—AI overload! Ask again in simpler terms.',
+                    'My blockchain brain can’t compute that—try a basic query.',
+                    'Quantum confusion detected—let’s stick to the basics!'
+                ];
+                response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+            }
+            logConsole(`You: ${query}\nAI: ${response}`, 'supportConsole');
+            document.getElementById('supportQuery').value = '';
+        }
+
+        function toggleAutoTrade() {
+            autoTradeActive = !autoTradeActive;
+            document.getElementById('autoTradeStatus').textContent = autoTradeActive ? 'On' : 'Off';
+            logConsole(`Auto-Trading ${autoTradeActive ? 'enabled' : 'disabled'}`, 'transactionLog');
+        }
+
+        function autoTrade() {
+            const threshold = parseFloat(document.getElementById('autoTradeThreshold').value) || 0;
+            const acc = accounts[currentAccount];
+            Object.keys(stockPrices).forEach(type => {
+                if (stockPrices[type] < threshold && acc.balance >= stockPrices[type]) {
+                    acc.balance -= stockPrices[type];
+                    acc.stocks[type]++;
+                    logConsole(`Auto-Bought 1 ${type} stock at ${stockPrices[type]} BTC`, 'transactionLog');
+                } else if (stockPrices[type] > threshold * 1.1 && acc.stocks[type] > 0) {
+                    acc.balance += stockPrices[type];
+                    acc.stocks[type]--;
+                    logConsole(`Auto-Sold 1 ${type} stock at ${stockPrices[type]} BTC`, 'transactionLog');
+                }
+            });
+            updateDashboard();
+        }
+
+        function updatePortfolio() {
+            updateDashboard();
+            logConsole('Portfolio refreshed', 'transactionLog');
+        }
+
+        function calculateTax() {
+            const acc = accounts[currentAccount];
+            const taxable = (acc.balance + acc.stocks.mrbeast * stockPrices.mrbeast + 
+                            acc.stocks.robux * stockPrices.robux + 
+                            acc.stocks.bitflash * stockPrices.bitflash) * 0.15; // 15% tax rate
+            document.getElementById('taxEstimate').textContent = taxable.toFixed(8);
+            logConsole(`Estimated tax: ${taxable.toFixed(8)} BTC`, 'transactionLog');
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('active');
+        }
+
+        function toggleDebug() {
+            const debugMode = document.getElementById('debugMode').checked;
+            document.getElementById('debugConsole').classList.toggle('hidden', !debugMode);
+            logConsole(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`, 'debugConsole');
+        }
+
+        function generateBackupKey() {
+            const key = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            document.getElementById('backupKey').value = key;
+            logConsole(`Backup key generated: ${key}`, 'debugConsole');
+        }
+
+        function simulateCrash() {
+            logConsole('Simulating crash...', 'debugConsole');
+            setTimeout(() => {
+                document.body.innerHTML = '<h1></h1>';
+            }, 1000);
+        }
+
+        function logConsole(message, consoleId) {
+            const log = consoleId === 'transactionLog' ? transactionLog :
+                        consoleId === 'supportConsole' ? supportLog : debugLog;
+            log.push(`${new Date().toLocaleTimeString()} - ${message}`);
+            if (log.length > 50) log.shift();
+            document.getElementById(consoleId).innerHTML = log.join('\n');
+        }
+
+        function hideModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Settings Handlers
+        document.getElementById('theme').addEventListener('change', (e) => {
+            switch(e.target.value) {
+                case 'light':
+                    document.body.style.background = 'linear-gradient(145deg, #ecf0f1 0%, #bdc3c7 100%)';
+                    document.body.style.color = '#2c3e50';
+                    break;
+                case 'cyber':
+                    document.body.style.background = 'linear-gradient(145deg, #0f0c29 0%, #302b63 100%)';
+                    document.body.style.color = '#00ffcc';
+                    break;
+                default:
+                    document.body.style.background = 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)';
+                    document.body.style.color = '#e0e0e0';
+            }
+            logConsole(`Theme set to ${e.target.value}`, 'debugConsole');
+        });
+
+        document.getElementById('notifications').addEventListener('change', (e) => {
+            logConsole(`Notifications ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        document.getElementById('soundAlerts').addEventListener('change', (e) => {
+            logConsole(`Sound alerts ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        document.getElementById('language').addEventListener('change', (e) => {
+            logConsole(`Language set to ${e.target.value}`, 'debugConsole');
+        });
+
+        document.getElementById('twoFactor').addEventListener('change', (e) => {
+            if (!e.target.checked) logConsole('2FA disabled', 'debugConsole');
+        });
+
+        document.getElementById('emailNotifications').addEventListener('change', (e) => {
+            logConsole(`Email notifications ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        document.getElementById('transactionFee').addEventListener('change', (e) => {
+            logConsole(`Transaction fee set to ${e.target.value}%`, 'debugConsole');
+        });
+
+        document.getElementById('priceInterval').addEventListener('change', (e) => {
+            clearInterval(priceUpdateInterval);
+            priceUpdateInterval = setInterval(updateDashboard, e.target.value * 1000);
+            logConsole(`Price update interval set to ${e.target.value}s`, 'debugConsole');
+        });
+
+        document.getElementById('displayPrecision').addEventListener('change', (e) => {
+            updateDashboard();
+            logConsole(`Display precision set to ${e.target.value} decimals`, 'debugConsole');
+        });
+
+        document.getElementById('volatility').addEventListener('change', (e) => {
+            logConsole(`Market volatility set to ${e.target.value}`, 'debugConsole');
+        });
+
+        document.getElementById('aiTrading').addEventListener('change', (e) => {
+            logConsole(`AI Trading ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        document.getElementById('quantumEncryption').addEventListener('change', (e) => {
+            logConsole(`Quantum Encryption ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        document.getElementById('earlyAccess').addEventListener('change', (e) => {
+            logConsole(`Early Access ${e.target.checked ? 'enabled' : 'disabled'}`, 'debugConsole');
+        });
+
+        // Initial setup
+        logConsole('Welcome to BitFlash Bank v2.0', 'transactionLog');
+        logConsole('Advanced AI Support online—ask me anything!', 'supportConsole');
+        let priceUpdateInterval = setInterval(updateDashboard, 5000);
+    </script>
+</body>
+</html>
